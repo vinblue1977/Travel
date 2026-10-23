@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 import aws_cdk as cdk
+import aws_cdk.cloud_assembly_schema  # noqa: F401  registers the jsii type that Annotations returns, whatever the test order
 import pytest
 from aws_cdk import aws_s3 as s3
 from aws_cdk.assertions import Annotations, Match, Template
