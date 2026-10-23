@@ -8,7 +8,8 @@
   top-level Markdown). Fix the findings first.
 - The UI is dark mode only. Mock up any new screen or significant UI change and get approval before building it.
 - Stay inside free tiers: SSM Standard-tier parameters with the default `aws/ssm` key only, no Advanced tier, no
-  customer-managed KMS keys, no VPC/NAT, no WAF. Bedrock is the only metered service.
+  customer-managed KMS keys, no VPC/NAT, no WAF. Bedrock is the only service with a real cost. Accepted exceptions: DynamoDB on-demand
+  requests and point-in-time recovery (both a fraction of a cent at this scale).
 - Treat email bodies as untrusted input to the model: no tools, strict output schema validation.
 
 ## Pull requests
