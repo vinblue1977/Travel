@@ -32,21 +32,31 @@ if [ -n "$accounts" ]; then
   status=1
 fi
 
-# Names from the PII_DENYLIST secret (comma-separated, never printed).
+# Author and committer emails across the whole history (file contents are scanned in the current tree only).
+raw="$(git_scan git log --format='%ae%n%ce')"
+authors="$(grep -vE '^$|^(noreply@(github|anthropic)\.com|[^@ ]+@(users\.)?noreply\.(github|anthropic)\.com)$' <<<"$raw" | sort -u || true)"
+if [ -n "$authors" ]; then
+  echo "$authors"
+  echo "::error::Commit author or committer emails above are not no-reply addresses. Set a noreply git email."
+  status=1
+fi
+
+# Names from the PII_DENYLIST secret (comma- or newline-separated, never printed).
 if [ -n "${PII_DENYLIST:-}" ]; then
-  IFS=',' read -r -a words <<<"$PII_DENYLIST"
-  history="$(git log --format='%an %ae %cn %ce %B')"  # read once: grep -q on a pipe can SIGPIPE git under pipefail
+  IFS=',' read -r -d '' -a words <<<"${PII_DENYLIST//$'\n'/,}" || true
+  history="$(git_scan git log --format='%an %ae %cn %ce %B')"
   for word in "${words[@]}"; do
     word="${word#"${word%%[![:space:]]*}"}"  # trim without echo/xargs, which mangle "-n" and apostrophes
     word="${word%"${word##*[![:space:]]}"}"
     [ -z "$word" ] && continue
-    if git grep -qiwF -- "$word" -- ':!*package-lock.json' || grep -qiwF -- "$word" <<<"$history"; then
+    tracked="$(git_scan git grep -liwF -- "$word" -- ':!*package-lock.json')"
+    if [ -n "$tracked" ] || grep -qiwF -- "$word" <<<"$history"; then
       echo "::error::A word from PII_DENYLIST appears in tracked files or commit history (not printed, to keep it private)."
       status=1
     fi
   done
 elif [ -n "${GITHUB_ACTIONS:-}" ]; then
-  # Fork and Dependabot runs don't get the secret; say so instead of passing silently.
+  # Fork and Dependabot runs don't get the Actions secret (add it as a Dependabot secret too); say so, don't pass silently.
   echo "::warning::PII_DENYLIST is not available on this run, so the private-name check was skipped."
 fi
 

@@ -28,6 +28,9 @@ frontend/dist/
 *.xlsx
 *.xls
 *.pdf
-data/
+/data/
+
+# Made-up sample emails and bookings are allowed (the privacy guard only permits them here)
+!tests/fixtures/**
 
 .DS_Store

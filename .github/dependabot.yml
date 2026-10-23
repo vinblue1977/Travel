@@ -42,5 +42,10 @@ updates:
       prefix: build
       include: scope
     groups:
+      # The CDK CLI must track aws-cdk-lib (cloud-assembly schema); keep it out of the pyright group so a held-back
+      # pyright bump can't block it.
+      cdk-cli:
+        patterns: ["aws-cdk"]
       dev-tools:
         patterns: ["*"]
+        exclude-patterns: ["aws-cdk"]

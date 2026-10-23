@@ -2,6 +2,7 @@
 
 import aws_cdk as cdk
 import pytest
+from aws_cdk import aws_s3 as s3
 from aws_cdk.assertions import Annotations, Match, Template
 from cdk_nag import AwsSolutionsChecks
 
@@ -38,3 +39,13 @@ def test_no_cdk_nag_findings(stack: cdk.Stack) -> None:
     annotations = Annotations.from_stack(stack)
     assert not annotations.find_error("*", Match.string_like_regexp("AwsSolutions-.*"))
     assert not annotations.find_warning("*", Match.string_like_regexp("AwsSolutions-.*"))
+
+
+def test_cdk_nag_reports_a_noncompliant_resource() -> None:
+    """Positive control: a bucket without SSL enforcement must raise a finding, proving the checks really run."""
+    app = cdk.App()
+    throwaway = cdk.Stack(app, "Throwaway")
+    s3.Bucket(throwaway, "Bucket")
+    cdk.Aspects.of(app).add(AwsSolutionsChecks())
+    Template.from_stack(throwaway)
+    assert Annotations.from_stack(throwaway).find_error("*", Match.string_like_regexp("AwsSolutions-.*"))
