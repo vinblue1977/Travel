@@ -14,7 +14,7 @@ from cdk_nag import AwsSolutionsChecks, INagLogger, NagLoggerNonComplianceData
 from infra.app import build_app
 
 # What `cdk synth` injects from cdk.json: the same feature flags and repo as a real deploy.
-CDK_CONTEXT: dict[str, object] = json.loads(Path("cdk.json").read_text())["context"]
+CDK_CONTEXT: dict[str, object] = json.loads((Path(__file__).parent.parent / "cdk.json").read_text())["context"]
 REPO = "test-owner@1/test-repo@2"
 
 
@@ -139,7 +139,7 @@ def test_deploy_role_trusts_only_this_repo_production_environment() -> None:
     template.resource_count_is("AWS::IAM::OIDCProvider", 0)
 
 
-def test_deploy_role_can_only_assume_cdk_roles_and_describe_the_table() -> None:
+def test_deploy_role_can_only_assume_three_cdk_roles_and_describe_the_table() -> None:
     statements = [
         statement
         for policy in _template({"githubRepo": REPO}).find_resources("AWS::IAM::Policy").values()
@@ -149,6 +149,12 @@ def test_deploy_role_can_only_assume_cdk_roles_and_describe_the_table() -> None:
         "dynamodb:DescribeTable",
         "sts:AssumeRole",
     ]
+    (assume,) = (s for s in statements if s["Action"] == "sts:AssumeRole")
+    arns = [json.dumps(resource) for resource in assume["Resource"]]
+    assert len(arns) == 3
+    assert all("*" not in arn for arn in arns)  # no wildcard: only the deploy, file-publishing and lookup roles
+    for kind in ("deploy", "file-publishing", "lookup"):
+        assert any(f"-{kind}-role-" in arn for arn in arns)
 
 
 def test_real_repo_setting_is_valid() -> None:

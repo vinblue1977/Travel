@@ -196,7 +196,7 @@ jobs:
         with:
           fail-on-severity: high
 
-  # Decides whether a push to main deploys: anything outside docs, Markdown, tests and CI config
+  # Decides whether a push to main deploys: anything outside docs, Markdown, tests, scripts, the license and CI config
   # (except this workflow, which holds the deploy step). A manual run on main always deploys: merges made by
   # GITHUB_TOKEN don't start a push run, so `gh workflow run ci.yml --ref main` covers them.
   changes:
@@ -230,9 +230,9 @@ jobs:
 
   deploy:
     # `checks` (which includes the privacy guard) runs on manual runs but is skipped on pushes, where the merged PR already
-    # passed it; a failed or cancelled `checks` blocks the deploy.
+    # passed it; only a successful `checks` (or none, on pushes) allows the deploy.
     needs: [changes, checks]
-    if: ${{ !cancelled() && needs.changes.outputs.deploy == 'true' && needs.checks.result != 'failure' }}
+    if: ${{ !cancelled() && needs.changes.outputs.deploy == 'true' && (needs.checks.result == 'success' || needs.checks.result == 'skipped') }}
     concurrency:
       group: deploy-production
       cancel-in-progress: false
@@ -265,6 +265,10 @@ jobs:
           uv pip install --python .venv/bin/python --require-hashes -r requirements-dev.txt
           npm ci --ignore-scripts --no-audit --no-fund  # the pinned CDK CLI (package-lock.json)
           make audit  # an advisory published since the PR stops the deploy (the PR already ran the tests)
+      - name: Require the deploy role secret (first-time setup is in the README)
+        run: '[ -n "$ROLE" ] || { echo "::error::Set the AWS_DEPLOY_ROLE_ARN secret on the production environment (see README: First-time AWS setup)"; exit 1; }'
+        env:
+          ROLE: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
       - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd  # v6.3.0
         with:
           role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}

@@ -6,7 +6,6 @@ import aws_cdk as cdk
 from aws_cdk import CfnOutput, DefaultStackSynthesizer, Duration, RemovalPolicy
 from aws_cdk import aws_dynamodb as dynamodb
 from aws_cdk import aws_iam as iam
-from cdk_nag import NagPackSuppression, NagSuppressions, RegexAppliesTo
 from constructs import Construct
 
 GITHUB = "token.actions.githubusercontent.com"
@@ -66,24 +65,15 @@ class TravelStack(cdk.Stack):
                 },
             ),
         )
-        # Deploys go through the CDK bootstrap roles.
+        # `cdk deploy` assumes exactly these bootstrap roles; naming them keeps out the cfn-exec and image-publishing roles.
         role.add_to_policy(
             iam.PolicyStatement(
                 actions=["sts:AssumeRole"],
-                resources=[f"arn:{self.partition}:iam::{self.account}:role/cdk-{qualifier}-*-{self.account}-{self.region}"],
+                resources=[
+                    f"arn:{self.partition}:iam::{self.account}:role/cdk-{qualifier}-{kind}-role-{self.account}-{self.region}"
+                    for kind in ("deploy", "file-publishing", "lookup")
+                ],
             )
         )
         self.table.grant(role, "dynamodb:DescribeTable")  # smoke test
-        NagSuppressions.add_resource_suppressions(
-            role,
-            [
-                NagPackSuppression(
-                    id="AwsSolutions-IAM5",
-                    reason="Only sts:AssumeRole on this account's CDK bootstrap roles",
-                    # Partition and account render as literals or tokens depending on flags and credentials.
-                    applies_to=[RegexAppliesTo(regex=rf"/^Resource::arn:.+:iam::.+:role\/cdk-{re.escape(qualifier)}-\*-.+$/g")],
-                )
-            ],
-            apply_to_children=True,
-        )
         CfnOutput(self, "GitHubDeployRoleArn", value=role.role_arn)
