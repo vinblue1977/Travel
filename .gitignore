@@ -28,6 +28,16 @@ frontend/dist/
 *.xlsx
 *.xls
 *.pdf
+*.ics
+*.xlsm
+*.doc
+*.docx
+*.rtf
+*.zip
+*.har
 data/
+
+# Made-up sample emails (.eml only, under tests/fixtures) are allowed; secrets and other data stay ignored
+!tests/fixtures/**/*.eml
 
 .DS_Store
