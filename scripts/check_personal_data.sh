@@ -15,7 +15,7 @@ git_scan() {
 
 # Emails (-o prints only the matched token, so an allowed address can't hide a real one on the same line),
 # except no-reply and example addresses.
-raw="$(git_scan git grep -nIoE '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}' -- ':!*package-lock.json')"
+raw="$(git_scan git grep --untracked -nIoE '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}' -- ':!*package-lock.json')"
 emails="$(grep -vE ':(noreply@(github|anthropic)\.com|[^:]*@(users\.)?noreply\.(github|anthropic)\.com|[^:]*@example\.(com|org))$' <<<"$raw" || true)"
 if [ -n "$emails" ]; then
   echo "$emails"
@@ -24,8 +24,8 @@ if [ -n "$emails" ]; then
 fi
 
 # AWS account IDs, except the docs example used in tests.
-raw="$(git_scan git grep -nwoE '[0-9]{12}' -- ':!*package-lock.json')"
-raw+=$'\n'"$(git_scan git grep -nIoE '[0-9]{4}-[0-9]{4}-[0-9]{4}' -- ':!*package-lock.json')"  # 1234-5678-9012 style
+raw="$(git_scan git grep --untracked -nIwoE '[0-9]{12}' -- ':!*package-lock.json')"
+raw+=$'\n'"$(git_scan git grep --untracked -nIoE '[0-9]{4}-[0-9]{4}-[0-9]{4}' -- ':!*package-lock.json')"  # 1234-5678-9012 style
 accounts="$(grep -vE ':123456789012$|:1234-5678-9012$|^$' <<<"$raw" || true)"
 if [ -n "$accounts" ]; then
   echo "$accounts"
@@ -47,7 +47,7 @@ fi
 if [ -n "${PII_DENYLIST:-}" ]; then
   IFS=',' read -r -d '' -a words <<<"${PII_DENYLIST//$'\n'/,}" || true
   history="$(git_scan git log --format='%an %ae %cn %ce %B')"
-  for word in "${words[@]}"; do
+  for word in ${words[@]+"${words[@]}"}; do
     word="${word#"${word%%[![:space:]]*}"}"  # trim without echo/xargs, which mangle "-n" and apostrophes
     word="${word%"${word##*[![:space:]]}"}"
     [ -z "$word" ] && continue
@@ -62,9 +62,9 @@ elif [ -n "${GITHUB_ACTIONS:-}" ]; then
   echo "::warning::PII_DENYLIST is not available on this run, so the private-name check was skipped."
 fi
 
-# Real booking emails and exports: only made-up samples under tests/fixtures are allowed.
-raw="$(git_scan git ls-files)"
-datafiles="$(grep -v '^tests/fixtures/' <<<"$raw" | grep -iE '\.(eml|msg|mbox|ics|xlsx|xlsm|xls|csv|pdf|doc|docx|rtf|zip|har)$' || true)"
+# Real booking emails and exports: only made-up .eml samples under tests/fixtures are allowed.
+raw="$(git_scan git ls-files --cached --others --exclude-standard)"
+datafiles="$(grep -vE '^tests/fixtures/.*\.eml$' <<<"$raw" | grep -iE '\.(eml|msg|mbox|ics|xlsx|xlsm|xls|csv|pdf|doc|docx|rtf|zip|har)$' || true)"
 if [ -n "$datafiles" ]; then
   echo "$datafiles"
   echo "::error::Email or data files are tracked above. Booking emails and exports must stay out of the repo."

@@ -35,9 +35,9 @@ frontend/dist/
 *.rtf
 *.zip
 *.har
-/data/
+data/
 
-# Made-up sample emails and bookings are allowed (the privacy guard only permits them here)
-!tests/fixtures/**
+# Made-up sample emails (.eml only, under tests/fixtures) are allowed; secrets and other data stay ignored
+!tests/fixtures/**/*.eml
 
 .DS_Store
