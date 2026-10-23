@@ -1,25 +1,28 @@
-"""Infrastructure tests: the stack synthesizes and passes cdk-nag."""
+"""Infrastructure tests: the real app configuration synthesizes, is locked down and passes cdk-nag."""
 
 import aws_cdk as cdk
-from aws_cdk.assertions import Annotations, Match
-from cdk_nag import AwsSolutionsChecks
+import pytest
+from aws_cdk.assertions import Annotations, Match, Template
 
-from infra.stack import TravelStack
-
-
-def _stack() -> TravelStack:
-    app = cdk.App()
-    stack = TravelStack(app, "Travel", env=cdk.Environment(account="123456789012", region="us-east-2"))
-    cdk.Aspects.of(app).add(AwsSolutionsChecks())
-    return stack
+from infra.app import build_app
 
 
-def test_stack_is_in_the_expected_region() -> None:
-    assert _stack().region == "us-east-2"
+@pytest.fixture
+def stack(monkeypatch: pytest.MonkeyPatch) -> cdk.Stack:
+    monkeypatch.setenv("CDK_DEFAULT_ACCOUNT", "123456789012")
+    return build_app().node.find_child("Travel")  # type: ignore[return-value]
 
 
-def test_no_cdk_nag_findings() -> None:
-    stack = _stack()
-    cdk.assertions.Template.from_stack(stack)  # runs the aspects
-    assert not Annotations.from_stack(stack).find_error("*", Match.string_like_regexp("AwsSolutions-.*"))
-    assert not Annotations.from_stack(stack).find_warning("*", Match.string_like_regexp("AwsSolutions-.*"))
+def test_stack_is_pinned_to_us_east_2(stack: cdk.Stack) -> None:
+    assert stack.region == "us-east-2"
+
+
+def test_stack_has_termination_protection(stack: cdk.Stack) -> None:
+    assert stack.termination_protection is True
+
+
+def test_no_cdk_nag_findings(stack: cdk.Stack) -> None:
+    Template.from_stack(stack)  # runs the aspects
+    annotations = Annotations.from_stack(stack)
+    assert not annotations.find_error("*", Match.string_like_regexp("AwsSolutions-.*"))
+    assert not annotations.find_warning("*", Match.string_like_regexp("AwsSolutions-.*"))

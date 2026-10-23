@@ -8,7 +8,7 @@ license-files = ["LICENSE"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = [".", "backend"]
+pythonpath = ["."]
 addopts = "-q --cov=infra --cov-report=term-missing:skip-covered --cov-fail-under=90"
 
 [tool.ruff]

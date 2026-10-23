@@ -4,15 +4,16 @@ set -euo pipefail
 
 status=0
 
-# Emails, except no-reply and example addresses.
-if git grep -nIE '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}' -- ':!*package-lock.json' \
-  | grep -vE '@(users\.)?noreply\.(github|anthropic)\.com|noreply@|@example\.(com|org)'; then
+# Emails (-o prints only the matched token, so an allowed address can't hide a real one on the same line),
+# except no-reply and example addresses.
+if git grep -nIoE '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}' -- ':!*package-lock.json' \
+  | grep -vE ':(noreply@[^:]*|[^:]*@(users\.)?noreply\.(github|anthropic)\.com|[^:]*@example\.(com|org))$'; then
   echo "::error::Found email addresses above. Personal emails stay out of this public repo."
   status=1
 fi
 
 # AWS account IDs, except the docs example used in tests.
-if git grep -nwE '[0-9]{12}' -- ':!*package-lock.json' | grep -v '123456789012'; then
+if git grep -nwoE '[0-9]{12}' -- ':!*package-lock.json' | grep -vE ':123456789012$'; then
   echo "::error::Found 12-digit numbers above that look like AWS account IDs. The deploy reads the account from AWS."
   status=1
 fi
@@ -22,13 +23,17 @@ if [ -n "${PII_DENYLIST:-}" ]; then
   IFS=',' read -r -a words <<<"$PII_DENYLIST"
   history="$(git log --format='%an %ae %cn %ce %B')"  # read once: grep -q on a pipe can SIGPIPE git under pipefail
   for word in "${words[@]}"; do
-    word="$(echo "$word" | xargs)"
+    word="${word#"${word%%[![:space:]]*}"}"  # trim without echo/xargs, which mangle "-n" and apostrophes
+    word="${word%"${word##*[![:space:]]}"}"
     [ -z "$word" ] && continue
     if git grep -qiwF -- "$word" -- ':!*package-lock.json' || grep -qiwF -- "$word" <<<"$history"; then
       echo "::error::A word from PII_DENYLIST appears in tracked files or commit history (not printed, to keep it private)."
       status=1
     fi
   done
+elif [ -n "${GITHUB_ACTIONS:-}" ]; then
+  # Fork and Dependabot runs don't get the secret; say so instead of passing silently.
+  echo "::warning::PII_DENYLIST is not available on this run, so the private-name check was skipped."
 fi
 
 # Real booking emails and exports: only made-up samples under tests/fixtures are allowed.

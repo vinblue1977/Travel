@@ -11,6 +11,11 @@
       "tests",
       ".venv",
       "build",
+      "cdk.out",
+      ".pytest_cache",
+      ".ruff_cache",
+      ".coverage",
+      ".git",
       "node_modules"
     ]
   },
