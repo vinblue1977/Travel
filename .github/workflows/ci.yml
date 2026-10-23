@@ -216,7 +216,7 @@ jobs:
           if [ "$EVENT" = workflow_dispatch ]; then
             changed="manual-run"
           elif git cat-file -e "${BEFORE}^{commit}" 2>/dev/null; then
-            changed="$(git diff --name-only "$BEFORE" "$GITHUB_SHA")"
+            changed="$(git diff --name-only --no-renames "$BEFORE" "$GITHUB_SHA")"  # a file moved into docs/ counts as deleted code
           else
             changed="unknown-base"
           fi
@@ -229,8 +229,10 @@ jobs:
           EVENT: ${{ github.event_name }}
 
   deploy:
-    needs: changes
-    if: needs.changes.outputs.deploy == 'true'
+    # `checks` (which includes the privacy guard) runs on manual runs but is skipped on pushes, where the merged PR already
+    # passed it; a failed or cancelled `checks` blocks the deploy.
+    needs: [changes, checks]
+    if: ${{ !cancelled() && needs.changes.outputs.deploy == 'true' && needs.checks.result != 'failure' }}
     concurrency:
       group: deploy-production
       cancel-in-progress: false
@@ -266,7 +268,7 @@ jobs:
       - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd  # v6.3.0
         with:
           role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
-          aws-region: ${{ vars.AWS_REGION || 'us-east-2' }}
+          aws-region: us-east-2  # the stack is pinned to this region
           mask-aws-account-id: true  # public repo: logs are public
       - name: Deploy
         run: |

@@ -81,7 +81,7 @@ class TravelStack(cdk.Stack):
                     id="AwsSolutions-IAM5",
                     reason="Only sts:AssumeRole on this account's CDK bootstrap roles",
                     # Partition and account render as literals or tokens depending on flags and credentials.
-                    applies_to=[RegexAppliesTo(regex=rf"/^Resource::arn:.+:iam::.+:role\/cdk-{qualifier}-\*-.+$/g")],
+                    applies_to=[RegexAppliesTo(regex=rf"/^Resource::arn:.+:iam::.+:role\/cdk-{re.escape(qualifier)}-\*-.+$/g")],
                 )
             ],
             apply_to_children=True,

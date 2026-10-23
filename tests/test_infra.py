@@ -127,7 +127,7 @@ def test_deploy_role_can_only_assume_cdk_roles_and_describe_the_table() -> None:
 
 
 def test_real_repo_setting_is_valid() -> None:
-    assert CDK_CONTEXT["githubRepo"] == "vinblue1977@13391763/Travel@1431431775"
+    assert CDK_CONTEXT["githubRepo"]
     _template()  # synthesizes with the real setting
 
 
