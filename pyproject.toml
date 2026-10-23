@@ -9,7 +9,7 @@ license-files = ["LICENSE"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
-addopts = "-q --cov=infra --cov-report=term-missing:skip-covered --cov-fail-under=90"
+addopts = "-q"
 
 [tool.ruff]
 line-length = 130

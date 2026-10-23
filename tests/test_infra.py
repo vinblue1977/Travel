@@ -3,14 +3,22 @@
 import aws_cdk as cdk
 import pytest
 from aws_cdk.assertions import Annotations, Match, Template
+from cdk_nag import AwsSolutionsChecks
 
 from infra.app import build_app
 
 
 @pytest.fixture
-def stack(monkeypatch: pytest.MonkeyPatch) -> cdk.Stack:
+def app(monkeypatch: pytest.MonkeyPatch) -> cdk.App:
     monkeypatch.setenv("CDK_DEFAULT_ACCOUNT", "123456789012")
-    return build_app().node.find_child("Travel")  # type: ignore[return-value]
+    return build_app()
+
+
+@pytest.fixture
+def stack(app: cdk.App) -> cdk.Stack:
+    child = app.node.find_child("Travel")
+    assert isinstance(child, cdk.Stack)
+    return child
 
 
 def test_stack_is_pinned_to_us_east_2(stack: cdk.Stack) -> None:
@@ -19,6 +27,10 @@ def test_stack_is_pinned_to_us_east_2(stack: cdk.Stack) -> None:
 
 def test_stack_has_termination_protection(stack: cdk.Stack) -> None:
     assert stack.termination_protection is True
+
+
+def test_cdk_nag_is_attached_to_the_app(app: cdk.App) -> None:
+    assert any(isinstance(aspect, AwsSolutionsChecks) for aspect in cdk.Aspects.of(app).all)
 
 
 def test_no_cdk_nag_findings(stack: cdk.Stack) -> None:

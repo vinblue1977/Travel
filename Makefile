@@ -21,10 +21,11 @@ lint:               ## Python: ruff (with Bandit security rules) and pyright typ
 	npx --no-install pyright
 
 test:
-	$(PYTHON) -m pytest -n auto
+	$(PYTHON) -m pytest -n auto --cov=infra --cov-report=term-missing:skip-covered --cov-fail-under=90
 
-audit:              ## Check dependencies for known vulnerabilities
+audit:              ## Check dependencies for known vulnerabilities (Python and the npm dev tools)
 	$(PYTHON) -m pip_audit --require-hashes --disable-pip -r requirements-dev.txt
+	npm audit --audit-level=high
 
 privacy:            ## Fail on emails, account IDs or data exports in tracked files (public repo)
 	scripts/check_personal_data.sh

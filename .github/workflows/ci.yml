@@ -43,14 +43,15 @@ jobs:
           echo "$changed"
           code="$(grep -Ev '^(docs/|[^/]+\.md$)' <<<"$changed" || true)"
           echo "run_checks=$([ -z "$changed" ] || [ -n "$code" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
-          # Python packages only change with the requirements files; the weekly run and every deploy still audit.
-          echo "deps_changed=$(grep -qE '(^|/)requirements[^/]*\.(txt|in)$' <<<"$changed" && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          # Dependencies only change with the requirements files or package.json/lockfile; the weekly run and every deploy still audit.
+          echo "deps_changed=$(grep -qE '(^|/)(requirements[^/]*\.(txt|in)|package(-lock)?\.json)$' <<<"$changed" && echo true || echo false)" >> "$GITHUB_OUTPUT"
         env:
           EVENT: ${{ github.event_name }}
           BASE: ${{ github.event.pull_request.base.sha }}
           HEAD: ${{ github.event.pull_request.head.sha }}
 
-  # Two parallel jobs; `checks` (the required status) passes only if both pass.
+  # Two parallel jobs; `checks` passes only if both pass. workflow-lint and dependency-review are separate
+  # required statuses in branch protection, so `checks` need not depend on them.
   python:
     needs: scope
     if: needs.scope.outputs.run_checks == 'true'
