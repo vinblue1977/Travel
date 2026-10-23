@@ -11,3 +11,12 @@ Status: planning. See [ROADMAP.md](ROADMAP.md).
 - AWS (us-east-2): Python Lambdas, DynamoDB, CDK in Python, a TypeScript/Preact PWA.
 - Booking emails are read from a Gmail label and parsed with Claude on Amazon Bedrock.
 - Built to stay inside the AWS free tiers; the only metered cost is Bedrock.
+
+## Development
+
+```sh
+make install   # Python venv (uv if installed) + Node tools
+make check     # everything CI runs: privacy, lint, tests, audit, synth
+```
+
+Merges to `main` deploy to AWS automatically (GitHub OIDC, no stored keys). Progress: [ROADMAP.md](ROADMAP.md).

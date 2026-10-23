@@ -4,11 +4,11 @@ When an item is finished, move it into Done.
 
 ## Done
 
-Nothing yet.
+- Repo, branch protection and CI (privacy guard, lint, types, tests, audit, cdk-nag synth, workflow lint, dependency review).
+- First CDK stack: DynamoDB table and a GitHub OIDC deploy role; CI deploys on merge to `main`.
 
 ## Next
 
-- Repo, CI and a first CDK stack (DynamoDB, GitHub OIDC deploy role).
 - Data model for trips and bookings (flight, hotel, car).
 - Email parser: Claude Haiku 4.5 on Bedrock, strict schema validation, Sonnet 4.5 fallback.
 - Trip grouping by destination city and date overlap; API to paste an email, list trips, edit and delete.

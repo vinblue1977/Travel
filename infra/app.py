@@ -8,8 +8,8 @@ from cdk_nag import AwsSolutionsChecks
 from infra.stack import TravelStack
 
 
-def build_app() -> cdk.App:
-    app = cdk.App()
+def build_app(context: dict[str, object] | None = None) -> cdk.App:
+    app = cdk.App(context=context)
     TravelStack(
         app,
         "Travel",
