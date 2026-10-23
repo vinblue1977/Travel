@@ -50,6 +50,21 @@ jobs:
           BASE: ${{ github.event.pull_request.base.sha }}
           HEAD: ${{ github.event.pull_request.head.sha }}
 
+  # The personal-data guard runs on every PR, docs-only ones included: pasted booking text is most likely to land in docs.
+  privacy:
+    if: github.event_name != 'push'
+    runs-on: ubuntu-24.04  # pinned; ubuntu-latest moves to 26 on 2026-10-19
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          fetch-depth: 0  # the guard reads the whole commit history
+          persist-credentials: false
+      - name: Personal-data guard (public repo)
+        run: make privacy
+        env:
+          PII_DENYLIST: ${{ secrets.PII_DENYLIST }}  # private names to block; never printed
+
   # Two parallel jobs; `checks` passes only if both pass. workflow-lint and dependency-review are separate
   # required statuses in branch protection, so `checks` need not depend on them.
   python:
@@ -60,7 +75,6 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
-          fetch-depth: 0  # the personal-data guard reads the whole commit history
           persist-credentials: false
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
         with:
@@ -82,10 +96,6 @@ jobs:
           cache: npm  # pyright and the CDK CLI, keyed on package-lock.json
       - name: Install pyright and the CDK CLI (exact versions; no install scripts)
         run: npm ci --ignore-scripts --no-audit --no-fund
-      - name: Personal-data guard (public repo)
-        run: make privacy
-        env:
-          PII_DENYLIST: ${{ secrets.PII_DENYLIST }}  # private names to block; never printed
       - name: Lint (ruff with Bandit security rules, pyright types)
         run: make lint
       - name: Unit and infrastructure tests (parallel)
@@ -129,7 +139,7 @@ jobs:
 
 
   checks:
-    needs: [scope, python, synth]
+    needs: [scope, privacy, python, synth]
     # Runs on every PR (a skipped required job counts as passed, so it must not be skipped when `scope` fails).
     # Not on cancelled runs (a newer push supersedes them), so they don't show a misleading failure.
     if: ${{ !cancelled() && github.event_name != 'push' }}
@@ -138,12 +148,13 @@ jobs:
     steps:
       - name: All checks passed
         run: |
-          echo "scope=$SC run_checks=$RUN python=$PY synth=$SY"
-          [ "$SC" = success ] || exit 1  # a failed scope job must fail the gate
+          echo "scope=$SC privacy=$PRIV run_checks=$RUN python=$PY synth=$SY"
+          [ "$SC" = success ] && [ "$PRIV" = success ] || exit 1  # a failed scope or privacy job must fail the gate
           [ "$RUN" = true ] || { echo "Docs-only change: nothing to check"; exit 0; }
           [ "$PY" = success ] && [ "$SY" = success ]
         env:
           SC: ${{ needs.scope.result }}
+          PRIV: ${{ needs.privacy.result }}
           RUN: ${{ needs.scope.outputs.run_checks }}
           PY: ${{ needs.python.result }}
           SY: ${{ needs.synth.result }}

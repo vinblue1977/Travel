@@ -28,6 +28,13 @@ frontend/dist/
 *.xlsx
 *.xls
 *.pdf
+*.ics
+*.xlsm
+*.doc
+*.docx
+*.rtf
+*.zip
+*.har
 /data/
 
 # Made-up sample emails and bookings are allowed (the privacy guard only permits them here)

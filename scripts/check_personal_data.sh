@@ -25,19 +25,21 @@ fi
 
 # AWS account IDs, except the docs example used in tests.
 raw="$(git_scan git grep -nwoE '[0-9]{12}' -- ':!*package-lock.json')"
-accounts="$(grep -vE ':123456789012$' <<<"$raw" || true)"
+raw+=$'\n'"$(git_scan git grep -nIoE '[0-9]{4}-[0-9]{4}-[0-9]{4}' -- ':!*package-lock.json')"  # 1234-5678-9012 style
+accounts="$(grep -vE ':123456789012$|:1234-5678-9012$|^$' <<<"$raw" || true)"
 if [ -n "$accounts" ]; then
   echo "$accounts"
   echo "::error::Found 12-digit numbers above that look like AWS account IDs. The deploy reads the account from AWS."
   status=1
 fi
 
-# Author and committer emails across the whole history (file contents are scanned in the current tree only).
-raw="$(git_scan git log --format='%ae%n%ce')"
-authors="$(grep -vE '^$|^(noreply@(github|anthropic)\.com|[^@ ]+@(users\.)?noreply\.(github|anthropic)\.com)$' <<<"$raw" | sort -u || true)"
+# Emails in author/committer fields and commit messages across the whole history (file contents are scanned in the
+# current tree only). Anything that looks like an email must be a no-reply address.
+raw="$(git_scan git log --format='%ae%n%ce%n%B')"
+authors="$(grep -oE '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}' <<<"$raw" | grep -vE '^$|^(noreply@(github|anthropic)\.com|[^@ ]+@(users\.)?noreply\.(github|anthropic)\.com)$' | sort -u || true)"
 if [ -n "$authors" ]; then
   echo "$authors"
-  echo "::error::Commit author or committer emails above are not no-reply addresses. Set a noreply git email."
+  echo "::error::Commit author or committer emails above are not no-reply addresses. Use a noreply git email and keep addresses out of commit messages."
   status=1
 fi
 
@@ -62,7 +64,7 @@ fi
 
 # Real booking emails and exports: only made-up samples under tests/fixtures are allowed.
 raw="$(git_scan git ls-files)"
-datafiles="$(grep -v '^tests/fixtures/' <<<"$raw" | grep -iE '\.(eml|msg|mbox|xlsx|xls|csv|pdf)$' || true)"
+datafiles="$(grep -v '^tests/fixtures/' <<<"$raw" | grep -iE '\.(eml|msg|mbox|ics|xlsx|xlsm|xls|csv|pdf|doc|docx|rtf|zip|har)$' || true)"
 if [ -n "$datafiles" ]; then
   echo "$datafiles"
   echo "::error::Email or data files are tracked above. Booking emails and exports must stay out of the repo."
