@@ -2,13 +2,14 @@
 
 import json
 from pathlib import Path
+from typing import cast
 
 import aws_cdk as cdk
-import aws_cdk.cloud_assembly_schema  # noqa: F401  registers the jsii type that Annotations returns, whatever the test order
+import jsii
 import pytest
 from aws_cdk import aws_s3 as s3
 from aws_cdk.assertions import Annotations, Match, Template
-from cdk_nag import AwsSolutionsChecks
+from cdk_nag import AwsSolutionsChecks, INagLogger, NagLoggerNonComplianceData
 
 from infra.app import build_app
 
@@ -53,14 +54,37 @@ def test_no_cdk_nag_findings() -> None:
     assert not annotations.find_warning("*", Match.string_like_regexp("AwsSolutions-.*"))
 
 
+@jsii.implements(INagLogger)
+class _FindingCollector:
+    """Records cdk-nag findings through its logger hook (Annotations.find_error can fail to deserialize entries in jsii)."""
+
+    def __init__(self) -> None:
+        self.findings: list[str] = []
+
+    def on_non_compliance(self, data: NagLoggerNonComplianceData) -> None:
+        self.findings.append(data.rule_id)
+
+    def on_compliance(self, data: object) -> None: ...
+
+    def on_error(self, data: object) -> None: ...
+
+    def on_not_applicable(self, data: object) -> None: ...
+
+    def on_suppressed(self, data: object) -> None: ...
+
+    def on_suppressed_error(self, data: object) -> None: ...
+
+
 def test_cdk_nag_reports_a_noncompliant_resource() -> None:
     """Positive control: a bucket without SSL enforcement must raise a finding, proving the checks really run."""
     app = cdk.App()
     throwaway = cdk.Stack(app, "Throwaway")
     s3.Bucket(throwaway, "Bucket")
-    cdk.Aspects.of(app).add(AwsSolutionsChecks())
+    collector = _FindingCollector()
+    # jsii passes the loggers one data object, while the stubs declare keyword arguments; hence the cast.
+    cdk.Aspects.of(app).add(AwsSolutionsChecks(additional_loggers=[cast(INagLogger, collector)]))
     Template.from_stack(throwaway)
-    assert Annotations.from_stack(throwaway).find_error("*", Match.string_like_regexp("AwsSolutions-.*"))
+    assert "AwsSolutions-S10" in collector.findings  # require SSL requests
 
 
 def test_table_is_protected_and_on_demand() -> None:
