@@ -4,6 +4,7 @@ version: 2
 updates:
   - package-ecosystem: github-actions
     directory: /
+    open-pull-requests-limit: 0  # paused while the project is parked; remove these lines to resume
     schedule:
       interval: weekly
     cooldown:
@@ -17,6 +18,7 @@ updates:
   # The CDK app and dev tools (requirements*.in; hashed lockfiles beside them).
   - package-ecosystem: pip
     directory: /
+    open-pull-requests-limit: 0  # paused while the project is parked; remove these lines to resume
     schedule:
       interval: weekly
     cooldown:
@@ -34,6 +36,7 @@ updates:
   # The CDK CLI that deploys and pyright (package.json).
   - package-ecosystem: npm
     directory: /
+    open-pull-requests-limit: 0  # paused while the project is parked; remove these lines to resume
     schedule:
       interval: weekly
     cooldown:
