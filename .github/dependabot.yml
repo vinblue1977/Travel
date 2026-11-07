@@ -1,11 +1,12 @@
 # Weekly update PRs for GitHub Actions (keeps the pinned commit SHAs current), Python and npm dependencies.
-# Python and npm version updates are PAUSED while the project is parked: remove BOTH `open-pull-requests-limit: 0`
-# lines below to resume. Security updates still open PRs.
+# All version updates are PAUSED while the project is parked: remove ALL THREE `open-pull-requests-limit: 0`
+# lines below to resume (the SHA-pinned actions go stale meanwhile). Security updates are enabled in repo settings and still open PRs.
 # Titles follow Conventional Commits ("ci(deps): ...", "build(deps): ...") to pass the PR title check.
 version: 2
 updates:
   - package-ecosystem: github-actions
     directory: /
+    open-pull-requests-limit: 0  # paused (see header)
     schedule:
       interval: weekly
     cooldown:
@@ -19,7 +20,7 @@ updates:
   # The CDK app and dev tools (requirements*.in; hashed lockfiles beside them).
   - package-ecosystem: pip
     directory: /
-    open-pull-requests-limit: 0  # paused while the project is parked; remove these lines to resume
+    open-pull-requests-limit: 0  # paused (see header)
     schedule:
       interval: weekly
     cooldown:
@@ -37,7 +38,7 @@ updates:
   # The CDK CLI that deploys and pyright (package.json).
   - package-ecosystem: npm
     directory: /
-    open-pull-requests-limit: 0  # paused while the project is parked; remove these lines to resume
+    open-pull-requests-limit: 0  # paused (see header)
     schedule:
       interval: weekly
     cooldown:
